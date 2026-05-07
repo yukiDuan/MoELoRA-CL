@@ -15,10 +15,10 @@ from transformers import PreTrainedModel
 # --------------------------
 class LoRAExpert(nn.Module):
 
-    def __init__(self, d_in: int, d_out: int, r: int = 8, alpha: float = 16.0):
+    def __init__(self, d_in: int, d_out: int, r: int = 8, alpha: float = 16.0, dtype=None):
         super().__init__()
-        self.lora_A = nn.Linear(d_in, r, bias=False)
-        self.lora_B = nn.Linear(r, d_out, bias=False)
+        self.lora_A = nn.Linear(d_in, r, bias=False, dtype=dtype)
+        self.lora_B = nn.Linear(r, d_out, bias=False, dtype=dtype)
         self.scaling = alpha / r
 
         nn.init.kaiming_uniform_(self.lora_A.weight, a=math.sqrt(5))
@@ -51,10 +51,11 @@ class MoELoRALayer(nn.Module):
         for param in self.base_linear.parameters():
             param.requires_grad = False
 
+        dtype = base_linear.weight.dtype
         self.experts = nn.ModuleList(
-            [LoRAExpert(d_in, d_out, r, alpha) for _ in range(num_experts)]
+            [LoRAExpert(d_in, d_out, r, alpha, dtype=dtype) for _ in range(num_experts)]
         )
-        self.router = nn.Linear(d_in, num_experts, bias=False)
+        self.router = nn.Linear(d_in, num_experts, bias=False, dtype=dtype)
 
         self.last_load_balance_loss = torch.tensor(0.0)
         self.last_router_probs = None
